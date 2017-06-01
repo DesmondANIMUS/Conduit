@@ -17,24 +17,26 @@ const connectionString = "mongodb://localhost/"
 type userBasicData struct {
 	UID            string `bson:"uid"`
 	Name           string `bson:"name"`
-	Sex            string `bson:"sex"`
-	Email          string `bson:"email"`
+	Sex            string `bson:"sex"` // 0 = Male, 1 = Female (That's how G+ giving me)
 	ProfilePicture string `bson:"profilepicture"`
 }
 type userProjects struct {
 	UID         string `bson:"uid"`
 	ProjectName string `bson:"projectname"`
 	ProjectDesc string `bson:"projectdesc"`
+	OwnersName  string `bson:"ownersname"`
 }
 type joinedProjects struct {
 	UID         string `bson:"uid"`
 	DUID        string `bson:"duid"`
 	ProjectName string `bson:"projectname"`
 	ProjectDesc string `bson:"projectdesc"`
+	OwnersName  string `bson:"ownersname"`
 }
 
 func main() {
-	// I don't even know if we need this registration thing, G+ can populate the profile just fine, why risk sending everything to server?
+	// I don't even know if we need this registration thing, G+ can populate the profile just fine,
+	//why risk sending everything to server?
 	http.HandleFunc("/registerLogin", registerLogin)
 	http.HandleFunc("/addProjects", addProjects)
 	http.HandleFunc("/joinProjects", joinProjects)
@@ -43,6 +45,9 @@ func main() {
 
 	//TODO:
 	// Api for availableProjects, bring all projects except that user's project whose profile you're logged in with
+	// Leave projects API
+	// User / Joined project info API (Info by UID)
+	// Available project info API (Info by ProjectName)
 
 	fmt.Println("Server listening at port 8888")
 	http.ListenAndServe(":8888", context.ClearHandler(http.DefaultServeMux))
@@ -56,7 +61,6 @@ func registerLogin(w http.ResponseWriter, r *http.Request) {
 		user.UID = r.FormValue("uid")
 		user.Name = r.FormValue("uname")
 		user.Sex = r.FormValue("usex")
-		user.Email = r.FormValue("umail")
 		user.ProfilePicture = r.FormValue("upic")
 
 		err := checkIfRegistered(user.UID)
@@ -90,6 +94,7 @@ func addProjects(w http.ResponseWriter, r *http.Request) {
 		proj.UID = r.FormValue("uid")
 		proj.ProjectName = r.FormValue("pname")
 		proj.ProjectDesc = r.FormValue("pdesc")
+		proj.OwnersName = r.FormValue("powname")
 
 		err := checkIfProjectExists(proj.ProjectName)
 		if err != nil {
@@ -115,6 +120,7 @@ func joinProjects(w http.ResponseWriter, r *http.Request) {
 		join.DUID = r.FormValue("duid")
 		join.ProjectName = r.FormValue("pname")
 		join.ProjectDesc = r.FormValue("pdesc")
+		join.OwnersName = r.FormValue("powname")
 
 		err := checkIfAlreadyJoined(join.DUID, join.ProjectName)
 
@@ -307,7 +313,7 @@ func checkAndUpdate(udata userBasicData) string {
 	result := userBasicData{}
 
 	c := session.DB("Conduit").C("UserBasicData")
-	err = c.Find(bson.M{"uid": udata.UID, "name": udata.Name, "sex": udata.Sex, "email": udata.Email, "profilepicture": udata.ProfilePicture}).One(&result)
+	err = c.Find(bson.M{"uid": udata.UID, "name": udata.Name, "sex": udata.Sex, "profilepicture": udata.ProfilePicture}).One(&result)
 	if err != nil {
 		colQuerier := bson.M{"uid": udata.UID}
 		err = c.Update(colQuerier, udata)
